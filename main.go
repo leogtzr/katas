@@ -4,28 +4,36 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
+func NumToWordHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	input := vars["num"]
+
+	number, err := strconv.Atoi(input)
+	if err != nil {
+		http.Error(w, "Invalid input: numeric value required", http.StatusBadRequest)
+		return
+	}
+
+	result := numToWord(number)
+
+	response := []byte(fmt.Sprintf(`{"number": %d, "word": "%s"}`, number, result))
+	w.Write(response)
+}
+
 func main() {
-	http.HandleFunc("/n2w", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+	router := mux.NewRouter()
 
-		queryParams := r.URL.Query()
-		input := queryParams.Get("num")
-
-		number, err := strconv.Atoi(input)
-		if err != nil {
-			http.Error(w, "Invalid input: numeric value required", http.StatusBadRequest)
-		} else {
-			response := []byte(fmt.Sprintf(`{"num": "%d", "word": "%s"}`, number, numToWord(number)))
-
-			w.Write(response)
-		}
-	})
+	router.HandleFunc("/word/{num:[0-9]+}", NumToWordHandler)
 
 	port := 8080
 	fmt.Printf("Server is listening on port %d...\n", port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), router)
 	if err != nil {
 		panic(err)
 	}
