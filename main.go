@@ -1,36 +1,32 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"os"
+	"net/http"
 	"strconv"
 )
 
 func main() {
-	for {
-		fmt.Printf("Enter some text: ")
-		reader := bufio.NewReader(os.Stdin)
+	http.HandleFunc("/n2w", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF { // EOF checking...
-				fmt.Println("EOF detected. Exiting.")
-				os.Exit(0)
-			}
-			fmt.Println("Error reading input:", err)
-			return
-		}
-
-		input = input[:len(input)-1]
+		queryParams := r.URL.Query()
+		input := queryParams.Get("num")
 
 		number, err := strconv.Atoi(input)
 		if err != nil {
-			fmt.Println("Error converting input to int:", err)
+			http.Error(w, "Invalid input: numeric value required", http.StatusBadRequest)
 		} else {
-			output := numToWord(number)
-			fmt.Printf("%d -> '%s'\n", number, output)
+			response := []byte(fmt.Sprintf(`{"num": "%d", "word": "%s"}`, number, numToWord(number)))
+
+			w.Write(response)
 		}
+	})
+
+	port := 8080
+	fmt.Printf("Server is listening on port %d...\n", port)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	if err != nil {
+		panic(err)
 	}
 }
